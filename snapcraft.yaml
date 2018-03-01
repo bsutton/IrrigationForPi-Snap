@@ -1,0 +1,68 @@
+name: pi-gation # you probably want to 'snapcraft register <name>'
+version: '0.1' # just for humans, typically '1.2+git' or '1.3.2'
+summary: Irrigation an lighting controller for Raspberry Pi
+description: | 
+  Pi-gation is a web app designed to allow you to control external lighting 
+  and irrigation systems from a mobile device.
+  
+  The app allows you to configure Pins on the Pi to control various devices 
+  such as Lights and Valves for an irrigation system.
+
+  In theory the app can be used to control any device attached to a Pi 
+  but it has specific interfaces that are fashioned around configuring 
+  irrigation and lighting systems.
+
+grade: devel # must be 'stable' to release into candidate/stable channels
+confinement: devmode # use 'strict' once you have the right plugs and slots
+  
+
+apps:
+  pi-gation:
+    command: pi-gation-launch
+    daemon: simple
+    plugs: [network, network-bind, gpio-memory-control]
+    
+    ## When 'on' is supported for environment we can remove the custom
+    ## launcher.
+      #environment:
+        #PI4J_PLATFORM: 
+      #- on arm64: 'RaspberryPi GPIO Provider' 
+      #- else: 'Simulated'
+        #SimulatedPlatform: 
+      #- on arm64: '' 
+      #- else: 'RaspberryPi GPIO Provider'
+ 
+  # used to ran the certbot renewal process.
+  cron:
+    command: cron
+    daemon: simple
+    plugs: [network, network-bind]
+
+  getcert:
+    command: getcert
+    plugs: [network, network-bind]
+
+#hooks:
+  #install:
+    #plugs: []
+
+  #configure:
+    #plugs: []
+
+parts: 
+  # build the web app
+  pi-gation-webapp:
+    plugin: maven
+    source: https://github.com/bsutton/IrrigationForPi.git
+    maven-options:
+      [-DskipTests=true]
+    organize:
+      war/irrigation-1.0-SNAPSHOT.war : webapps/ROOT.war
+    after: [setup-repo,getcert,tomcat-with-ssl]
+
+  # copies the files in src to
+  # the root of the snap directory 
+  pi-gation-launch:
+    plugin: dump
+    source: src
+  
